@@ -19,7 +19,7 @@ def create_freq(seq_len, dim):
     assert freqs.shape[0] == seq_len
     assert freqs.shape[1] == dim //2
 
-    return torch.reshape(freqs, (seq_len, 1, 1, dim //2))
+    return torch.reshape(freqs, (seq_len, dim //2))
     
 # freq = create_freq(seq_len = 512, dim=64)
 # print(freq.size()) #(512, 1, 1, 32)
@@ -31,46 +31,52 @@ def RoPE_fwd_kernel(
     freq_ptr,       # position embedding ptr (m*theta)
     out_ptr,        # position embedding ptr
 
-    in_row_str,     # row_stride 
+    in_row_str,     # row_stride
+    in_batch_str, 
     in_col_str,
     freq_row_str,
     freq_col_str,
     out_row_str,
+    out_batch_str,
     out_col_str,
    
     in_row_num,     # number of rows 
+    in_batch_num,   # number of batch
     in_col_num,     # number of columns
     freq_row_num,
     freq_col_num,
     out_row_num,
+    out_batch_num,
     out_col_num, 
     BLOCK_SIZE : tl.constexpr, 
 ):
     
     assert out_row_num == in_row_num
     assert out_col_num == in_col_num
+    assert out_batch_num == in_batch_num
     
     pid = tl.program_id(0)
-    tile_row_offset = pid
+    tile_row_offset = pid // in_batch_num
+    tile_batch_offset = pid % in_batch_num
     tile_col_offset0 = 0
     tile_col_offset1 = in_col_num // 2
     
     in_first_ptr = tl.make_block_ptr(
         in_ptr,
-        shape = (in_row_num, in_col_num),
-        strides = (in_row_str, in_col_str), 
-        offsets = (tile_row_offset, tile_col_offset0),
-        block_shape = (1, BLOCK_SIZE // 2),
-        order = (1, 0),
+        shape = (in_row_num, in_batch_num, in_col_num),
+        strides = (in_row_str, in_batch_str, in_col_str), 
+        offsets = (tile_row_offset, tile_batch_offset, tile_col_offset0),
+        block_shape = (1, 1, BLOCK_SIZE // 2),
+        order = (2, 1, 0),
     )
  
     in_second_ptr = tl.make_block_ptr(
         in_ptr,
-        shape = (in_row_num, in_col_num),
-        strides = (in_row_str, in_col_str), 
-        offsets = (tile_row_offset, tile_col_offset1),
-        block_shape = (1, BLOCK_SIZE // 2),
-        order = (1, 0),
+        shape = (in_row_num, in_batch_num, in_col_num),
+        strides = (in_row_str, in_batch_str, in_col_str), 
+        offsets = (tile_row_offset, tile_batch_offset, tile_col_offset1),
+        block_shape = (1, 1, BLOCK_SIZE // 2),
+        order = (2, 1, 0),
     )
     
     freq_block_ptr = tl.make_block_ptr(
@@ -91,52 +97,51 @@ def RoPE_fwd_kernel(
 
     out_first_ptr = tl.make_block_ptr(
         out_ptr, 
-        shape = (out_row_num, out_col_num), 
-        strides = (out_row_str, out_col_str),
-        offsets = (tile_row_offset, tile_col_offset0), 
-        block_shape=(1, BLOCK_SIZE // 2),
-        order = (1, 0)
+        shape = (out_row_num, out_batch_num,  out_col_num), 
+        strides = (out_row_str, out_batch_str, out_col_str),
+        offsets = (tile_row_offset, tile_batch_offset, tile_col_offset0), 
+        block_shape=(1,1, BLOCK_SIZE // 2),
+        order = (2, 1, 0)
     )
     
     out_second_ptr = tl.make_block_ptr(
         out_ptr, 
-        shape = (out_row_num, out_col_num), 
-        strides = (out_row_str, out_col_str),
-        offsets = (tile_row_offset, tile_col_offset1), 
-        block_shape=(1, BLOCK_SIZE // 2),
-        order = (1, 0)
+        shape = (out_row_num, out_batch_num, out_col_num), 
+        strides = (out_row_str, out_batch_str, out_col_str),
+        offsets = (tile_row_offset, tile_batch_offset, tile_col_offset1), 
+        block_shape=(1, 1, BLOCK_SIZE // 2),
+        order = (2, 1, 0)
     )
     
     tl.store(out_first_ptr, out_first_half, boundary_check=(0,1))
     tl.store(out_second_ptr, out_second_half, boundary_check=(0, 1))
-    
-    
-def RoPE_fwd(
-    input : torch.tensor,
-    freq : torch.tensor,
-) -> torch.tensor: 
-    
+ 
+
+def RoPE_fwd(input : torch.tensor, freq : torch.tensor) -> torch.tensor: 
+    old_shape = input.shape
     #prepare input
     n_row = input.shape[0]
     n_col = input.shape[-1]
+    input = torch.reshape(input, (n_row, -1, n_col)) # [seq, batch*head_num, head_dim]
+    n_batch = input.shape[1]
+    
     BLOCK_SIZE = triton.next_power_of_2(n_col)
-    # print(BLOCK_SIZE)
     output = torch.empty_like(input)
 
-    RoPE_fwd_kernel[(n_row, )](
+    RoPE_fwd_kernel[(n_row * n_batch, )](
         input,
         freq,
         output,
-        input.stride(0), input.stride(1), 
+        input.stride(0), input.stride(1), input.stride(2), 
         freq.stride(0), freq.stride(1),
-        output.stride(0), output.stride(1), 
-        input.shape[0], input.shape[1],
-        freq.shape[0], freq.shape[1],
-        output.shape[0], output.shape[1],
+        output.stride(0), output.stride(1), output.stride(2),  
+        input.shape[0], input.shape[1], input.shape[2], 
+        freq.shape[0], freq.shape[1],    
+        output.shape[0], output.shape[1], output.shape[2],
         BLOCK_SIZE
     )
-    return output
-
+    return output.reshape(old_shape)   
+    
 
 class TransformerEngineRoPE: 
     def __init__(self, hidden_size = 64, max_seq = 512, device = torch.device("cuda:0")):
@@ -150,8 +155,8 @@ class TransformerEngineRoPE:
         return self.output_tensor
     
     def backward(self, grad_tensor : torch.Tensor):
-        print(grad_tensor.shape)
-        print(self.output_tensor.shape)
+        # print(grad_tensor.shape)
+        # print(self.output_tensor.shape)
         assert grad_tensor.shape == self.output_tensor.shape
 
         gradient_passer = torch.ones_like(self.output_tensor)
@@ -161,16 +166,15 @@ class TransformerEngineRoPE:
 
 
 # input
-input_tensor = torch.rand((512, 1, 1, 64), dtype=torch.float32, device=device)
+input_tensor = torch.randn((512, 1, 8, 64), dtype=torch.float32, device=device)
 
 # base implementation    
 te_impl = TransformerEngineRoPE(hidden_size=64)
 output_torch = te_impl.forward(input_tensor)
 
 # my implemtation
-_input_tensor = torch.reshape(input_tensor, (512, 64))
-freq = create_freq(512, 64).to("cuda:0").reshape((512, -1))
-output_triton = RoPE_fwd(_input_tensor, freq).reshape(512, 1, 1, 64)
+freq = create_freq(512, 64).to("cuda:0")
+output_triton = RoPE_fwd(input_tensor, freq)
 
 # allow some absolute error
 # sin, cos causes some value diff
