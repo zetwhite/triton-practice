@@ -8,6 +8,7 @@ def create_freq(seq_len, dim):
     '''
     Create matrix for m * theta
     TODO: optimize it using @triton.jit
+    TODO: caching it inside the RoPE_forwad()
     '''
     dim_index = torch.arange(0, dim, 2, device=device).float() / dim
     theta = 1.0 / (10000 ** dim_index)
@@ -112,8 +113,8 @@ def RoPE_fwd_kernel(
         order = (2, 1, 0)
     )
     
-    tl.store(out_first_ptr, out_first_half, boundary_check=(0,1))
-    tl.store(out_second_ptr, out_second_half, boundary_check=(0, 1))
+    tl.store(out_first_ptr, out_first_half, boundary_check=(0, 1))
+    tl.store(out_second_ptr, out_second_half, boundary_check=(0,1))
  
 
 def RoPE_fwd(input : torch.tensor, freq : torch.tensor) -> torch.tensor: 
