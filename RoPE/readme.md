@@ -61,9 +61,17 @@
     # you could check a simple result image(*.png) in perf
     ```
 
+* seq_len에 따른 프로파일링 결과는 아래와 같습니다. 
+  * <img src="https://github.com/zetwhite/triton-practice/assets/61981457/bb6b90b2-eb28-4328-a73e-72a32640d6b0" width="50%">
+
 
 # Note 
 forward와 backward 커널에 대한 pseudo code는 아래와 같습니다. 
+
+#### formula  
+
+<img src="https://github.com/zetwhite/triton-practice/assets/61981457/9ca4e6ae-7667-4b4c-9ccd-23b741860278" width="40%"> 
+<sub> from ROFORMER: ENHANCED TRANSFORMER WITH ROTARY POSITION EMBEDDING, https://arxiv.org/pdf/2104.09864.pdf </sub>
 
 #### forward 
 ```python 
@@ -72,6 +80,7 @@ forward와 backward 커널에 대한 pseudo code는 아래와 같습니다.
 # freq       (shape = (seq, 1, 1, dim_head // 2)),        ; 미리 계산해둔 (m x theta) array 
 # out_tensor (shape = (seq_len, batch, n_head, dim_head)) ; output tensor가 저장될 위치 
 
+# 최대 a*b*c개 병렬 수행
 a, b, c = select based on tl.program_id()
 
 # load 
@@ -96,6 +105,7 @@ STORE(second_out, out_tensor[a, b, c, dim//2:])
 # freq            (shape = (seq, 1, 1, dim_head // 2)),        ; 미리 계산해둔 (m x theta) array 
 # out_grad_tensor (shape = (seq_len, batch, n_head, dim_head)) ; output tensor가 저장될 위치 
 
+# 최대 a*b*c개 병렬 수행 
 a, b, c = select based on tl.program_id() 
 
 # load 
