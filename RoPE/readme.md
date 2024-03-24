@@ -29,12 +29,17 @@
   ```
 
 # Run
-* After attaching the container, you could run the code in this directory. 
+* After attaching the container, you could run the code in this directory.
+   ```bash
+   # inside the container, don't forget to move this directroy 
+   cd /home/RoPE
+   ```
 
 * `value_check.py` 는 triton으로 직접 구현한 RoPE forward, backword 함수와 [Transformer Engine에 있는 함수](https://github.com/NVIDIA/TransformerEngine/blob/5b90b7f5ed67b373bc5f843d1ac3b7a8999df08e/transformer_engine/pytorch/attention.py#L1037-L1078)의 텐서값을 비교합니다. 
     ```bash
     python3 value_check.py
 
+    # wait for a moment
     # expected log
     # Let's check accuracy, by comparing transformer_engine implementation and my own kernel :D
     #
@@ -51,6 +56,8 @@
     * <sub> 아쉽게도 로컬에서 메모리가 최신버전의 Transformer Engine을 빌드하지 못 했습니다. 😢 </sub>  
     ``` bash 
     python perf.py
+    
+    # this takes some times... 
     # you could check a simple result image(*.png) in perf
     ```
 
