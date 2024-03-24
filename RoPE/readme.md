@@ -70,7 +70,7 @@ a, b, c = select based on tl.program_id()
 # load 
 in_first_half = LOAD(in_tensor[a, b, c, :dim//2])
 in_second_half = LOAD(in_tensor[a, b, c, dim//2:])
-freq = LOAD(freq[a, ...])
+freq = LOAD(freq[a, 1, 1, :])
 
 # compute
 first_out = in_first_half * cos(freq) - in_second_half * sin(freq)
@@ -94,7 +94,7 @@ a, b, c = select based on tl.program_id()
 # load 
 in_first_half = LOAD(in_grad_tensor[a, b, c, :dim//2])
 in_second_half = LOAD(in_grad_tensor[a, b, c, dim//2:])
-freq = LOAD(freq[a, ...])
+freq = LOAD(freq[a, 1, 1, :])
 
 # compute
 out_grad_first = in_first_half * cos(freq) + in_second_half * sin(freq)
