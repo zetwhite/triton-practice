@@ -9,7 +9,7 @@ import os
 @triton.testing.perf_report(
     triton.testing.Benchmark(
         x_names=['seq_len'],
-        x_vals=[2**i for i in range(5, 20, 1)],
+        x_vals=[2**i for i in range(5, 15, 1)],
         x_log=True,                                 # logarithmic in x axis
         line_arg = 'provider', 
         line_vals = ['my', 'base'],
@@ -17,7 +17,7 @@ import os
         styles=[('blue', '-'), ('green','-')],
         ylabel = 'GB/s',
         plot_name = 'RoPE forward() perf',
-        args = {'batch':1, 'n_head':8, 'dim_head':128}, 
+        args = {'batch':1, 'n_head':8, 'dim_head':256}, 
     )) 
 def benchmark(seq_len, batch, n_head, dim_head, provider) :
     
