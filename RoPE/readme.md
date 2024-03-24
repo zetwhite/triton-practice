@@ -63,7 +63,7 @@
 
 
 # Note 
-forward와 backward에 대한 간단한 pseudo code는 아래와 같습니다. 
+forward와 backward 커널에 대한 pseudo code는 아래와 같습니다. 
 
 #### forward 
 ```python 
