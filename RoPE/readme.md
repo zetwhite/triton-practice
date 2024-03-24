@@ -53,7 +53,7 @@
 
 * `perf.py`는 직접 구현한 RoPE forward함수와 Transformer Engine의 함수의 프로파일링 결과를 비교합니다.
     * 다만, 여기서 비교되는 Transformer Engine의 RoPE함수(`apply_rotary_pos_embed`)는 [fused](https://github.com/NVIDIA/TransformerEngine/commit/6c1a8bb5dffbce386380f8e5a12c45f7032d9b76#diff-8215778f23231390f7e41e1339eed64843646d7aba265b8dbf3d68a76c1a647f)가 적용되기전의 함수 입니다.
-    * <sub> 아쉽게도 로컬에서 메모리가 최신버전의 Transformer Engine을 빌드하지 못 했습니다. 😢 </sub>  
+    * <sub> 아쉽게도 로컬에서 메모리가 부족해서 최신버전의 Transformer Engine을 빌드하지 못 했습니다. 😢 </sub>  
     ``` bash 
     python perf.py
     
