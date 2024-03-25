@@ -76,7 +76,7 @@ forward와 backward 커널에 대한 pseudo code는 아래와 같습니다.
 
 <sub> from ROFORMER: ENHANCED TRANSFORMER WITH ROTARY POSITION EMBEDDING, https://arxiv.org/pdf/2104.09864.pdf </sub>
 
-* ⚠️ 실제 구현에서는 위 수식과 다르게... `x_n`, `x_n + d/2` element의 position diff를 인코딩하는 방식으로 구현되어 있음.
+* ⚠️ 위 수식에서는 `(x_n, x_n+1)` element를 `m*theta`만큼 rotate하고 있지만, Transformer Engine에서는 메모리 interleaving을 줄이기 위해 (`x_n`, `x_n + d/2`) element를 rotate하는 방식을 취하고 있습니다. 
 
 #### forward 
 ```python 
