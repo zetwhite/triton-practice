@@ -76,7 +76,8 @@ forward와 backward 커널에 대한 pseudo code는 아래와 같습니다.
 
 <sub> from ROFORMER: ENHANCED TRANSFORMER WITH ROTARY POSITION EMBEDDING, https://arxiv.org/pdf/2104.09864.pdf </sub>
 
-* ⚠️ 위 수식에서는 `(x_n, x_n+1)` element를 `m*theta`만큼 rotate하고 있지만, Transformer Engine에서는 메모리 interleaving을 줄이기 위해 (`x_n`, `x_n + d/2`) element를 rotate하는 방식을 취하고 있습니다. 
+* ⚠️ 위 수식에서는 `(x_n, x_n+1)` element를 `m*theta`만큼 rotate하고 있지만, Transformer Engine에서는 메모리 interleaving을 줄이기 위해 (`x_n`, `x_n + d/2`) element를 rotate하는 방식을 취하고 있습니다.
+* 따라서 triton으로 작성된 커널도 Transformer Engine과 같은 방식으로 동작하도록 코딩했습니다. 
 
 #### forward 
 ```python 
