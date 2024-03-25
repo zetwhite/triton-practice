@@ -70,9 +70,13 @@ forward와 backward 커널에 대한 pseudo code는 아래와 같습니다.
 
 #### formula  
 
+
+
 <img src="https://github.com/zetwhite/triton-practice/assets/61981457/9ca4e6ae-7667-4b4c-9ccd-23b741860278" width="40%"> 
 
 <sub> from ROFORMER: ENHANCED TRANSFORMER WITH ROTARY POSITION EMBEDDING, https://arxiv.org/pdf/2104.09864.pdf </sub>
+
+* ⚠️ 실제 구현에서는 위 수식과 다르게... `x_n`, `x_n + d/2` element의 position diff를 인코딩하는 방식으로 구현되어 있음.
 
 #### forward 
 ```python 
